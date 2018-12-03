@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 var Models = require('../models/index');
 const cookieParser = require('cookie-parser');
 let bcrypt = require('bcrypt-nodejs');
+let sha256 = require('sha256');
 
 var session = require('express-session');
 var flash = require('req-flash');
@@ -25,7 +26,7 @@ exports.register = (req, res) => {
         last_name: req.body.last_name,
         username: req.body.username,
         email: req.body.email,
-        password: bcrypt.hashSync(req.body.password),
+        password: sha256(req.body.password),
         confirm_password: req.body.confirm_password
     }
 
@@ -54,16 +55,13 @@ exports.register = (req, res) => {
 };
 
 exports.login = (req, res) => {
-    console.log(req.body.email);
     Models.User.findOne({where: {email: req.body.email}})
     .then(user => {
         if(user == null) {
             req.flash('error_msg', 'User not found');
             res.redirect('/');
         } else {
-            console.log(user.password);
-            console.log('---');
-            if(bcrypt.hashSync(req.body.password) !== user.password) {
+            if(sha256(req.body.password) !== user.password) {
                 req.flash('error_msg', 'Password does not match');
                 res.redirect('/');
             } else {
@@ -78,4 +76,8 @@ exports.login = (req, res) => {
 exports.logout = (req, res) => {
     res.clearCookie('access_token');
     res.redirect('/');
+}
+
+exports.showDashBoard = (req, res) => {
+    res.render('admin/dashboard', {layout: 'layouts/admin.hbs', title: 'Admin Dashboard'});
 }

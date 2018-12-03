@@ -1,8 +1,13 @@
 var bodyParser = require('body-parser');
 var express = require('express');
+require('dotenv').config();
+
 var router = express.Router();
 
 var apiRouter = require('./api');
+
+let authenticateUserCookie = require('./middlewares/authenticateUserCookie');
+
 
 const userController = require('../controllers/userController');
 
@@ -18,9 +23,7 @@ module.exports = function (app) {
     res.render('register', {layout: 'layouts/layout.hbs', title: 'Register'});
   });
 
-  app.get('/dashboard', function(req, res) {
-    res.render('admin/dashboard', {layout: 'layouts/admin.hbs', title: 'Admin Dashboard'});
-  });
+  app.get('/dashboard', authenticateUserCookie, userController.showDashBoard);
 
   app.get('/logout', userController.logout);
 
