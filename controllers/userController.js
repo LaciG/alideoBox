@@ -1,43 +1,56 @@
 const jwt = require('jsonwebtoken');
+var Models = require('../models/index');
+const cookieParser = require('cookie-parser');
 
-var User = require('../models/user');
-
-var Index = require('../models/index');
+var session = require('express-session');
+var flash = require('req-flash');
 
 var appData = {};
 
-/* exports.register = function(req,res) {
-    appData['name'] = req.body.name;
-    appData['email'] = req.body.email;
-    appData['password'] = req.body.password;
-
-    res.status(201).json(appData);
-}; */
+let insertUser = (insertUserObject) => {
+    return Models.User.create({
+        first_name: insertUserObject.first_name,
+        last_name: insertUserObject.last_name,
+        username: insertUserObject.username,
+        email:  insertUserObject.email,
+        password: insertUserObject.password,
+    })
+}
 
 
 exports.register = (req, res) => {
-    return Index.User.count({ where: {email: req.body.email} })
-        .then(count => {
-            if (count != 0) {
-                appData["error"] = 1;
-                appData["data"] = "Taken Email";
-                res.status(409).json(appData);
-            }else {
-                Index.User.create({
-                name: req.body.name,
-                email: req.body.email,
-                password: req.body.password
-              })
-              .then(user => {
-                appData["error"] = 1;
-                appData["data"] = "User Registered";
-                res.status(201).json(appData);
-              })
-              .catch(error => {
-                console.log('This error Occured', error);
-              });
-            }
+    let insertUserObject = {
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
+        username: req.body.username,
+        email: req.body.email,
+        password: req.body.password,
+        confirm_password: req.body.confirm_password
+    }
+
+    console.log(req.body.email);
+
+    req.checkBody('first_name', 'First Name is required').notEmpty();
+    req.checkBody('last_name', 'Last Name is required').notEmpty();
+    req.checkBody('email', 'E-Mail is required').notEmpty();
+    req.checkBody('email', 'E-Mail is not valid').isEmail();
+    req.checkBody('username', 'Username is required').notEmpty();
+    req.checkBody('password', 'Password is required').notEmpty();
+    req.checkBody('confirm_password', 'Passwords do not match').equals(req.body.password);
+
+    var errors = req.validationErrors();
+    if(errors){
+        res.render('register', {
+            layout: 'layouts/layout.hbs',
+            errors:errors
         });
+    } else {
+        insertUser(insertUserObject)
+        .then(result => {
+            req.flash('success_msg', 'You are registered and can now login');
+            res.redirect('/');
+        })
+    }
 };
 
 exports.login = (req, res) => {
