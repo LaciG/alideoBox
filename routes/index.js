@@ -22,9 +22,8 @@ module.exports = function (app) {
     res.render('admin/dashboard', {layout: 'layouts/admin.hbs', title: 'Admin Dashboard'});
   });
 
-  app.get('/logout', function(req, res) {
-    res.redirect('/');
-  });
+  app.get('/logout', userController.logout);
 
   app.post('/register', userController.register);
+  app.post('/login', userController.login);
 }

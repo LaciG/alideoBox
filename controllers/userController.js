@@ -1,11 +1,12 @@
 const jwt = require('jsonwebtoken');
 var Models = require('../models/index');
 const cookieParser = require('cookie-parser');
+let bcrypt = require('bcrypt-nodejs');
 
 var session = require('express-session');
 var flash = require('req-flash');
 
-var appData = {};
+require('dotenv').config();
 
 let insertUser = (insertUserObject) => {
     return Models.User.create({
@@ -24,11 +25,10 @@ exports.register = (req, res) => {
         last_name: req.body.last_name,
         username: req.body.username,
         email: req.body.email,
-        password: req.body.password,
+        password: bcrypt.hashSync(req.body.password),
         confirm_password: req.body.confirm_password
     }
 
-    console.log(req.body.email);
 
     req.checkBody('first_name', 'First Name is required').notEmpty();
     req.checkBody('last_name', 'Last Name is required').notEmpty();
@@ -54,14 +54,28 @@ exports.register = (req, res) => {
 };
 
 exports.login = (req, res) => {
-    Index.User.findOne({
-        where: {
-            email: req.body.email
+    console.log(req.body.email);
+    Models.User.findOne({where: {email: req.body.email}})
+    .then(user => {
+        if(user == null) {
+            req.flash('error_msg', 'User not found');
+            res.redirect('/');
+        } else {
+            console.log(user.password);
+            console.log('---');
+            if(bcrypt.hashSync(req.body.password) !== user.password) {
+                req.flash('error_msg', 'Password does not match');
+                res.redirect('/');
+            } else {
+                var token = jwt.sign({ user_id: user.id }, process.env.SECRET_KEY);
+                res.cookie('access_token', token);
+                res.redirect('/dashboard');
+            }
         }
     })
-        .then(user => {
-            if(user !== null){
-                res.send('Logged In!!!<br> But not checking the password!!!<bR>Authenticate HERE!!!');
-            }
-        })
 };
+
+exports.logout = (req, res) => {
+    res.clearCookie('access_token');
+    res.redirect('/');
+}
