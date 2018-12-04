@@ -27,6 +27,8 @@ module.exports = function (app) {
 
   app.get('/logout', userController.logout);
 
+  app.get('/forgotpassword', userController.showForgotPassword);
+
   app.post('/register', userController.register);
   app.post('/login', userController.login);
 }
