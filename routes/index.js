@@ -28,6 +28,9 @@ module.exports = function (app) {
   app.get('/logout', userController.logout);
 
   app.get('/forgotpassword', userController.showForgotPassword);
+  app.post('/resetpassword', userController.resetPassword);
+  app.get('/resetpassword', userController.showNewPassword);
+  app.post('/updatepassword', userController.updatePassword);
 
   app.post('/register', userController.register);
   app.post('/login', userController.login);

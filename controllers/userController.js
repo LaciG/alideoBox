@@ -30,12 +30,18 @@ var mailer = nodemailer.createTransport({
 
 require('dotenv').config();
 //MAIL SENDING
-let sendMailForUser = (result, subject) => {
+let sendMailForUser = (result, subject, reason) => {
+    let mailTemplate = "";
+    if(reason == 'register') {
+        mailTemplate = reason;
+    } else if(reason == 'forgot_password') {
+        mailTemplate = reason;
+    }
     mailer.sendMail({
         from: process.env.MAILER_AUTH_USER,
         to: result.email,
         subject: subject,
-        template: 'register',
+        template: mailTemplate,
         context: {
             first_name: result.first_name,
             last_name: result.last_name,
@@ -58,6 +64,14 @@ let insertUser = (insertUserObject) => {
         email:  insertUserObject.email,
         password: insertUserObject.password,
     })
+}
+
+let findUserByEmail = (email) => {
+    return Models.User.findOne({where: {email: email}})
+}
+
+let updateUserPassword = (password, userID) => {
+    return Models.User.update({password: password},{ where: {id: userID}})
 }
 
 
@@ -90,7 +104,7 @@ exports.register = (req, res) => {
         insertUser(insertUserObject)
         .then(result => {
             if(req.body.remember) {
-                sendMailForUser(result, 'Registration data');
+                sendMailForUser(result, 'Registration data', 'register');
             } 
             req.flash('success_msg', 'You are registered and can now login');
             res.redirect('/');
@@ -106,7 +120,7 @@ exports.login = (req, res) => {
             res.redirect('/');
         } else {
             if(sha256(req.body.password) !== user.password) {
-                req.flash('error_msg', 'Password does not match');
+                req.flash('error_msg', 'Wrong password');
                 res.redirect('/');
             } else {
                 var token = jwt.sign({ user_id: user.id }, process.env.SECRET_KEY);
@@ -128,4 +142,37 @@ exports.showDashBoard = (req, res) => {
 
 exports.showForgotPassword = (req, res) => {
     res.render('forgot_password', {layout: 'layouts/layout.hbs', title: 'Forgot password'});
+}
+
+exports.resetPassword = (req, res) => {
+    let email = req.body.email;
+    findUserByEmail(email)
+    .then(result => {
+        sendMailForUser(result, 'Forgotten password', 'forgot_password');
+        req.flash('success_msg', 'We sent you a mail with the instructions');
+        res.redirect('/forgotpassword');
+    })
+}
+
+exports.showNewPassword = (req, res) => {
+    let email = req.query.email;
+    res.render('password_new', {layout: 'layouts/layout.hbs', title: email, email: email});   
+}
+
+exports.updatePassword = (req, res) => {
+    let email = req.body.email,
+        password = sha256(req.body.password);
+        console.log(email);
+    findUserByEmail(email)
+    .then(user => {
+        if(user == null) {
+            req.flash('error_msg', 'User not found');
+            res.redirect('/resetpassword');
+        }
+        return updateUserPassword(password, user.id)
+    })
+    .then(result => {
+        req.flash('success_msg', 'Your password has benn changed. You can login now');
+        res.redirect('/');
+    })
 }
